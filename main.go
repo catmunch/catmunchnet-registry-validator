@@ -251,14 +251,23 @@ func loadResources() {
 	LoadInetNums()
 	LoadInet6Nums()
 }
-func main() {
+func mergeRequestValidate() {
 	context := &Context{}
 	getCommit(context)
 	checkout(context, context.UpstreamCommit)
 	loadResources()
 	checkout(context, context.PrCommit)
 	checkChangedResources(context)
-	if !valid {
-		panicErr(fmt.Errorf("registry is not valid"))
+}
+func main() {
+	if len(os.Args) > 1 && os.Args[1] == "merge" {
+		mergeRequestValidate()
+	} else {
+		loadResources()
 	}
+	if !valid {
+		raiseError("registry is not valid")
+		os.Exit(1)
+	}
+	fmt.Println("registry is valid")
 }
