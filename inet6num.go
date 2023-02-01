@@ -56,7 +56,7 @@ func insertCIDR6(net *net.IPNet) error {
 }
 func LoadInet6Num(fileName string) (*Inet6Num, error) {
 	if !Inet6Regex.MatchString(fileName) {
-		panicErr(fmt.Errorf("invalid inet6num filename: %s", fileName))
+		return nil, fmt.Errorf("invalid inet6num filename: %s", fileName)
 	}
 	var inet6Num Inet6Num
 	bytes, err := os.ReadFile("inet6num/" + fileName)

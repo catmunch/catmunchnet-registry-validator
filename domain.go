@@ -19,7 +19,7 @@ var domains []*Domain
 
 func LoadDomain(domainName string) (*Domain, error) {
 	if !DomainRegex.MatchString(domainName) {
-		panicErr(fmt.Errorf("invalid domain: %s", domainName))
+		return nil, fmt.Errorf("invalid domain: %s", domainName)
 	}
 	var domain Domain
 	bytes, err := os.ReadFile("domain/" + domainName)
