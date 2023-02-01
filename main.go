@@ -258,4 +258,7 @@ func main() {
 	loadResources()
 	checkout(context, context.PrCommit)
 	checkChangedResources(context)
+	if !valid {
+		panicErr(fmt.Errorf("registry is not valid"))
+	}
 }
