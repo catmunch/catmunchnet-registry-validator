@@ -6,6 +6,7 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -59,6 +60,23 @@ func raiseError(s string) {
 }
 func checkChangedResources(context *Context) {
 	patches := context.Patch.FilePatches()
+	sort.Slice(patches, func(i, j int) bool {
+		from1, to1 := patches[i].Files()
+		from2, to2 := patches[i].Files()
+		if to1 == nil {
+			return true
+		}
+		if to2 == nil {
+			return false
+		}
+		if from1 == nil {
+			return true
+		}
+		if from2 == nil {
+			return false
+		}
+		return false
+	})
 	for _, patch := range patches {
 		from, to := patch.Files()
 		resourcePath := ""
@@ -75,37 +93,19 @@ func checkChangedResources(context *Context) {
 					raiseError("autnum/" + asn + " is invalid: " + err.Error())
 				} else {
 					fmt.Println("New ASN: " + autnum.Autnum + "(" + autnum.Name + ")")
+					autnums[asn] = autnum
 				}
 			} else if to == nil {
-				index := -1
-				for i, autnum := range autnums {
-					if autnum.Autnum == asn {
-						index = i
-						break
-					}
-				}
-				if index == -1 {
-					panicErr(fmt.Errorf("cannot find ASN %s", asn))
-				}
-				fmt.Println("Deleted ASN: " + autnums[index].Autnum + "(" + autnums[index].Name + ")")
-				autnums = append(autnums[:index], autnums[index+1:]...)
+				fmt.Println("Deleted ASN: " + autnums[asn].Autnum + "(" + autnums[asn].Name + ")")
+				delete(autnums, asn)
 			} else {
-				index := -1
-				for i, autnum := range autnums {
-					if autnum.Autnum == asn {
-						index = i
-						break
-					}
-				}
-				if index == -1 {
-					panicErr(fmt.Errorf("cannot find ASN %s", asn))
-				}
-				autnums = append(autnums[:index], autnums[index+1:]...)
+				delete(autnums, asn)
 				autnum, err := LoadAutnum(asn)
 				if err != nil {
 					raiseError("autnum/" + asn + " is invalid: " + err.Error())
 				} else {
 					fmt.Printf("ASN %s modified.", autnum.Autnum)
+					autnums[asn] = autnum
 				}
 			}
 		} else if strings.HasPrefix(resourcePath, "domain/") {
@@ -116,37 +116,19 @@ func checkChangedResources(context *Context) {
 					raiseError("domain/" + domainFile + " is invalid: " + err.Error())
 				} else {
 					fmt.Println("New Domain: " + domain.Domain)
+					domains[domainFile] = domain
 				}
 			} else if to == nil {
-				index := -1
-				for i, domain := range domains {
-					if domain.Domain == domainFile {
-						index = i
-						break
-					}
-				}
-				if index == -1 {
-					panicErr(fmt.Errorf("cannot find domain %s", domainFile))
-				}
-				fmt.Println("Deleted domain: " + domains[index].Domain)
-				domains = append(domains[:index], domains[index+1:]...)
+				fmt.Println("Deleted domain: " + domains[domainFile].Domain)
+				delete(domains, domainFile)
 			} else {
-				index := -1
-				for i, domain := range domains {
-					if domain.Domain == domainFile {
-						index = i
-						break
-					}
-				}
-				if index == -1 {
-					panicErr(fmt.Errorf("cannot find domain %s", domainFile))
-				}
-				domains = append(domains[:index], domains[index+1:]...)
+				delete(domains, domainFile)
 				domain, err := LoadDomain(domainFile)
 				if err != nil {
 					raiseError("domain/" + domainFile + " is invalid: " + err.Error())
 				} else {
 					fmt.Printf("Domain %s modified.", domain.Domain)
+					domains[domainFile] = domain
 				}
 			}
 		} else if strings.HasPrefix(resourcePath, "inetnum/") {
@@ -157,37 +139,19 @@ func checkChangedResources(context *Context) {
 					raiseError("inetNum/" + inetNumFile + " is invalid: " + err.Error())
 				} else {
 					fmt.Println("New IPv4 Block: " + inetNum.CIDR)
+					inetNums[inetNumFile] = inetNum
 				}
 			} else if to == nil {
-				index := -1
-				for i, inetNum := range inetNums {
-					if strings.ReplaceAll(inetNum.CIDR, "/", "_") == inetNumFile {
-						index = i
-						break
-					}
-				}
-				if index == -1 {
-					panicErr(fmt.Errorf("cannot find inetnum %s", inetNumFile))
-				}
-				fmt.Println("Deleted IPv4 Block: " + inetNums[index].CIDR)
-				inetNums = append(inetNums[:index], inetNums[index+1:]...)
+				fmt.Println("Deleted IPv4 Block: " + inetNums[inetNumFile].CIDR)
+				delete(inetNums, inetNumFile)
 			} else {
-				index := -1
-				for i, inetNum := range inetNums {
-					if strings.ReplaceAll(inetNum.CIDR, "/", "_") == inetNumFile {
-						index = i
-						break
-					}
-				}
-				if index == -1 {
-					panicErr(fmt.Errorf("cannot find inetnum %s", inetNumFile))
-				}
-				inetNums = append(inetNums[:index], inetNums[index+1:]...)
+				delete(inetNums, inetNumFile)
 				inetNum, err := LoadInetNum(inetNumFile)
 				if err != nil {
 					raiseError("inetNum/" + inetNumFile + " is invalid: " + err.Error())
 				} else {
 					fmt.Printf("IPv4 Block %s modified.", inetNum.CIDR)
+					inetNums[inetNumFile] = inetNum
 				}
 			}
 		} else if strings.HasPrefix(resourcePath, "inet6num/") {
@@ -198,40 +162,67 @@ func checkChangedResources(context *Context) {
 					raiseError("inet6Num/" + inet6NumFile + " is invalid: " + err.Error())
 				} else {
 					fmt.Println("New IPv6 Block: " + inet6Num.CIDR)
+					inet6Nums[inet6NumFile] = inet6Num
 				}
 			} else if to == nil {
-				index := -1
-				for i, inet6Num := range inet6Nums {
-					if strings.ReplaceAll(inet6Num.CIDR, "/", "_") == inet6NumFile {
-						index = i
-						break
-					}
-				}
-				if index == -1 {
-					panicErr(fmt.Errorf("cannot find inet6Num %s", inet6NumFile))
-				}
-				fmt.Println("Deleted IPv6 Block: " + inet6Nums[index].CIDR)
-				inet6Nums = append(inet6Nums[:index], inet6Nums[index+1:]...)
+				fmt.Println("Deleted IPv6 Block: " + inet6Nums[inet6NumFile].CIDR)
+				delete(inet6Nums, inet6NumFile)
 			} else {
-				index := -1
-				for i, inet6Num := range inet6Nums {
-					if strings.ReplaceAll(inet6Num.CIDR, "/", "_") == inet6NumFile {
-						index = i
-						break
-					}
-				}
-				if index == -1 {
-					panicErr(fmt.Errorf("cannot find inet6Num %s", inet6NumFile))
-				}
-				inet6Nums = append(inet6Nums[:index], inet6Nums[index+1:]...)
+				delete(inet6Nums, inet6NumFile)
 				inet6Num, err := LoadInet6Num(inet6NumFile)
 				if err != nil {
 					raiseError("inet6Num/" + inet6NumFile + " is invalid: " + err.Error())
 				} else {
 					fmt.Printf("IPv6 Block %s modified.", inet6Num.CIDR)
+					inet6Nums[inet6NumFile] = inet6Num
 				}
 			}
-			// TODO: } else if strings.HasPrefix(resourcePath, "route/") {
+		} else if strings.HasPrefix(resourcePath, "route/") {
+			routeFile := strings.TrimPrefix(resourcePath, "route/")
+			if from == nil {
+				route, err := LoadRoute(routeFile)
+				if err != nil {
+					raiseError("route/" + routeFile + " is invalid: " + err.Error())
+				} else {
+					fmt.Println("New IPv4 Route: " + route.CIDR)
+					routes[routeFile] = route
+				}
+			} else if to == nil {
+				fmt.Println("Deleted IPv4 Route: " + routes[routeFile].CIDR)
+				delete(routes, routeFile)
+			} else {
+				delete(routes, routeFile)
+				route, err := LoadRoute(routeFile)
+				if err != nil {
+					raiseError("route/" + routeFile + " is invalid: " + err.Error())
+				} else {
+					fmt.Printf("IPv4 Route %s modified.", route.CIDR)
+					routes[routeFile] = route
+				}
+			}
+		} else if strings.HasPrefix(resourcePath, "route6/") {
+			routeFile := strings.TrimPrefix(resourcePath, "route6/")
+			if from == nil {
+				route, err := LoadRoute6(routeFile)
+				if err != nil {
+					raiseError("route6/" + routeFile + " is invalid: " + err.Error())
+				} else {
+					fmt.Println("New IPv6 Route: " + route.CIDR)
+					routes6[routeFile] = route
+				}
+			} else if to == nil {
+				fmt.Println("Deleted IPv6 Route: " + routes6[routeFile].CIDR)
+				delete(routes6, routeFile)
+			} else {
+				delete(routes6, routeFile)
+				route, err := LoadRoute6(routeFile)
+				if err != nil {
+					raiseError("route6/" + routeFile + " is invalid: " + err.Error())
+				} else {
+					fmt.Printf("IPv6 Route %s modified.", route.CIDR)
+					routes6[routeFile] = route
+				}
+			}
 		} else {
 			_, _ = fmt.Fprintln(os.Stderr, "invalid resource: "+resourcePath)
 		}
@@ -250,6 +241,21 @@ func loadResources() {
 	LoadDomains()
 	LoadInetNums()
 	LoadInet6Nums()
+	LoadRoutes()
+	LoadRoutes6()
+}
+func finalValidate() {
+	autnums = map[string]*Autnum{}
+	domains = map[string]*Domain{}
+	inetNums = map[string]*InetNum{}
+	inet6Nums = map[string]*Inet6Num{}
+	routes = map[string]*Route{}
+	routes6 = map[string]*Route6{}
+	cidrRoot = TrieNode{}
+	cidr6Root = TrieNode{}
+	loadResources()
+	ValidateRoutes()
+	ValidateRoutes6()
 }
 func mergeRequestValidate() {
 	context := &Context{}
@@ -262,9 +268,13 @@ func mergeRequestValidate() {
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "merge" {
 		mergeRequestValidate()
-	} else {
-		loadResources()
 	}
+	if !valid {
+		raiseError("registry is not valid")
+		os.Exit(1)
+	}
+	fmt.Println("Running final check")
+	finalValidate()
 	if !valid {
 		raiseError("registry is not valid")
 		os.Exit(1)

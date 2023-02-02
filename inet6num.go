@@ -16,7 +16,7 @@ type Inet6Num struct {
 }
 
 var Inet6Regex = regexp.MustCompile(`^([a-f0-9:]+)_(\d{1,2})$`)
-var inet6Nums []*Inet6Num
+var inet6Nums map[string]*Inet6Num
 
 var cidr6Root TrieNode
 
@@ -53,6 +53,32 @@ func insertCIDR6(net *net.IPNet) error {
 	}
 	ptr.Used = true
 	return nil
+}
+func IsValidRouteCIDR6(net *net.IPNet) error {
+	mask, _ := net.Mask.Size()
+	if net.IP[0] != 0xfc || net.IP[1] != 0x75 || mask < 16 {
+		return fmt.Errorf("CIDR must be in fc75::/16")
+	}
+	ptr := &cidrRoot
+	mask -= 16
+	bytePos := 2
+	bitPos := 0
+	for i := 0; i < mask; i++ {
+		if ptr.Used {
+			return nil
+		}
+		side := (net.IP[bytePos] >> (7 - bitPos)) & 1
+		if ptr.Child[side] == nil {
+			break
+		}
+		ptr = ptr.Child[side]
+		bitPos++
+		if bitPos == 8 {
+			bytePos++
+			bitPos = 0
+		}
+	}
+	return fmt.Errorf("route is not contained in any defined IPv6 block")
 }
 func LoadInet6Num(fileName string) (*Inet6Num, error) {
 	if !Inet6Regex.MatchString(fileName) {
@@ -104,6 +130,6 @@ func LoadInet6Nums() {
 			raiseError("invalid inet6num content in upstream repo: " + fileName)
 			panicErr(err)
 		}
-		inet6Nums = append(inet6Nums, inet6Num)
+		inet6Nums[fileName] = inet6Num
 	}
 }

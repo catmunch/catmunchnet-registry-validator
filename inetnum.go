@@ -16,7 +16,7 @@ type InetNum struct {
 }
 
 var InetRegex = regexp.MustCompile(`^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})_(\d{1,2})$`)
-var inetNums []*InetNum
+var inetNums map[string]*InetNum
 
 type TrieNode struct {
 	Used  bool
@@ -59,6 +59,32 @@ func insertCIDR(net *net.IPNet) error {
 	}
 	ptr.Used = true
 	return nil
+}
+func IsValidRouteCIDR(net *net.IPNet) error {
+	mask, _ := net.Mask.Size()
+	if net.IP[0] != 10 || mask < 8 {
+		return fmt.Errorf("CIDR must be in 10.0.0.0/8")
+	}
+	ptr := &cidrRoot
+	mask -= 8
+	bytePos := 1
+	bitPos := 0
+	for i := 0; i < mask; i++ {
+		if ptr.Used {
+			return nil
+		}
+		side := (net.IP[bytePos] >> (7 - bitPos)) & 1
+		if ptr.Child[side] == nil {
+			break
+		}
+		ptr = ptr.Child[side]
+		bitPos++
+		if bitPos == 8 {
+			bytePos++
+			bitPos = 0
+		}
+	}
+	return fmt.Errorf("route is not contained in any defined IPv4 block")
 }
 func LoadInetNum(fileName string) (*InetNum, error) {
 	if !InetRegex.MatchString(fileName) {
@@ -110,6 +136,6 @@ func LoadInetNums() {
 			raiseError("invalid inetnum content in upstream repo: " + fileName)
 			panicErr(err)
 		}
-		inetNums = append(inetNums, inetNum)
+		inetNums[fileName] = inetNum
 	}
 }

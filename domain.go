@@ -15,7 +15,7 @@ type Domain struct {
 }
 
 var DomainRegex = regexp.MustCompile(`^[a-zA-Z\d-_]+\.catmunch$`)
-var domains []*Domain
+var domains map[string]*Domain
 
 func LoadDomain(domainName string) (*Domain, error) {
 	if !DomainRegex.MatchString(domainName) {
@@ -53,6 +53,6 @@ func LoadDomains() {
 			raiseError("invalid domain content in upstream repo: " + domainName)
 			panicErr(err)
 		}
-		domains = append(domains, domain)
+		domains[domainName] = domain
 	}
 }

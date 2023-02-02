@@ -16,7 +16,7 @@ type Autnum struct {
 }
 
 var ASNRegex = regexp.MustCompile(`^AS(\d+)$`)
-var autnums []*Autnum
+var autnums map[string]*Autnum
 
 func LoadAutnum(asn string) (*Autnum, error) {
 	if !ASNRegex.MatchString(asn) {
@@ -59,6 +59,6 @@ func LoadAutnums() {
 			raiseError("invalid asn content in upstream repo: " + asn)
 			panicErr(err)
 		}
-		autnums = append(autnums, autnum)
+		autnums[asn] = autnum
 	}
 }
