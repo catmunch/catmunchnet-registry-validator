@@ -78,6 +78,9 @@ func IsValidRouteCIDR6(net *net.IPNet) error {
 			bitPos = 0
 		}
 	}
+	if ptr.Used {
+		return nil
+	}
 	return fmt.Errorf("route is not contained in any defined IPv6 block")
 }
 func LoadInet6Num(fileName string) (*Inet6Num, error) {

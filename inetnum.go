@@ -84,6 +84,9 @@ func IsValidRouteCIDR(net *net.IPNet) error {
 			bitPos = 0
 		}
 	}
+	if ptr.Used {
+		return nil
+	}
 	return fmt.Errorf("route is not contained in any defined IPv4 block")
 }
 func LoadInetNum(fileName string) (*InetNum, error) {
