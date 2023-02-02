@@ -73,3 +73,14 @@ func ValidateRoutes() {
 		}
 	}
 }
+func GenerateROA() string {
+	result := ""
+	for _, route := range routes {
+		_, cidr, _ := net.ParseCIDR(route.CIDR)
+		mask, _ := cidr.Mask.Size()
+		for _, asn := range route.Origin {
+			result += fmt.Sprintf("route %s max %d as %s;\n", route.CIDR, mask, asn)
+		}
+	}
+	return result
+}

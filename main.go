@@ -265,6 +265,18 @@ func mergeRequestValidate() {
 	checkout(context, context.PrCommit)
 	checkChangedResources(context)
 }
+func generateROAFiles() {
+	err := os.Mkdir("roa", 0750)
+	panicErr(err)
+	roa4 := GenerateROA()
+	roa6 := GenerateROA6()
+	err = os.WriteFile("roa/roa4.conf", []byte(roa4), 0666)
+	panicErr(err)
+	err = os.WriteFile("roa/roa6.conf", []byte(roa6), 0666)
+	panicErr(err)
+	err = os.WriteFile("roa/roa.conf", []byte(roa4+roa6), 0666)
+	panicErr(err)
+}
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "merge" {
 		mergeRequestValidate()
@@ -280,4 +292,8 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Println("registry is valid")
+	if len(os.Args) > 1 && os.Args[1] == "roa" {
+		generateROAFiles()
+		fmt.Println("ROA generated")
+	}
 }
